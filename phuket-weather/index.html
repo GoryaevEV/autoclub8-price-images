@@ -19,8 +19,9 @@
   </header>
 
   <div class="tabs" role="tablist">
-    <button type="button" class="tab active" data-mode="here">🌧️ Дождь здесь</button>
+    <button type="button" class="tab active" data-mode="here">🌧️ Дождь</button>
     <button type="button" class="tab" data-mode="route">🏍️ Маршрут</button>
+    <button type="button" class="tab" data-mode="beach">🏖️ Пляжи</button>
   </div>
 
   <nav class="places mode-here" id="places" aria-label="Места"></nav>
@@ -64,6 +65,19 @@
 
   <section class="card mode-route" id="routeResult" hidden></section>
 
+  <section class="card mode-beach" hidden>
+    <div class="route-row beach-row">
+      <label for="beachRegion">Регион</label>
+      <select id="beachRegion"></select>
+    </div>
+    <div class="route-row beach-row">
+      <label for="beachTime">Когда</label>
+      <select id="beachTime"></select>
+    </div>
+  </section>
+
+  <section class="mode-beach" id="beachList" hidden></section>
+
   <section class="card mode-here">
     <h2>Радар Метеослужбы Таиланда <span class="muted">TMD, Пхукет, радиус 240 км</span></h2>
     <p class="hint" style="margin:0 0 10px">Официальный радар в Пхукете — детальнее, чем карта выше. Покрывает Пханг Нгу и Краби.</p>
@@ -96,13 +110,14 @@
   <footer class="foot">
     Данные: <a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer</a> (радар),
     <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (прогноз),
-    <a href="https://project-osrm.org/" target="_blank" rel="noopener">OSRM</a> (маршруты),
+    <a href="https://project-osrm.org/" target="_blank" rel="noopener">OSRM</a> (маршруты), Open-Meteo Marine (волны, уровень моря),
     © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>.
     <span id="updated"></span>
   </footer>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
   <script src="route.js"></script>
+  <script src="beaches.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

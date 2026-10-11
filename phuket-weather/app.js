@@ -486,6 +486,7 @@ async function refreshAll() {
 
 renderPlaces();
 route.init();
+beaches.init();
 map.setView([state.point.lat, state.point.lon], 10);
 refreshAll();
 setInterval(refreshAll, 10 * 60 * 1000);

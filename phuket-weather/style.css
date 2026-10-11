@@ -164,3 +164,25 @@ h2 { font-size: 16px; margin: 0 0 10px; }
 .tmd-btns a.btn { text-decoration: none; }
 .tmd-frame { margin-top: 10px; }
 .tmd-frame iframe { width: 100%; height: 70vh; max-height: 640px; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+
+.tab { font-size: 14px; padding: 8px 4px; }
+.beach-row { grid-template-columns: 64px 1fr; }
+.beach {
+  background: var(--card); border: 1px solid var(--border); border-left: 6px solid var(--muted);
+  border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; cursor: pointer;
+}
+.beach.calm { border-left-color: var(--ok); }
+.beach.small { border-left-color: #84cc16; }
+.beach.mid { border-left-color: var(--warn); }
+.beach.big { border-left-color: var(--bad); }
+.beach-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.beach-head b { font-size: 16px; }
+.beach-wave { font-size: 20px; font-weight: 700; white-space: nowrap; }
+.beach-sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.beach-tide { font-size: 13px; margin-top: 6px; }
+.beach svg { display: block; width: 100%; height: auto; margin-top: 6px; }
+.beach svg .tide { fill: none; stroke: var(--accent); stroke-width: 2; }
+.beach svg .area { fill: var(--accent); opacity: .12; }
+.beach svg .nowline { stroke: var(--bad); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.beach svg text { fill: var(--muted); font-size: 10px; }
+.arrow { display: inline-block; }
