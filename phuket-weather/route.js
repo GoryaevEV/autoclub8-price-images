@@ -59,16 +59,17 @@ const route = {
   setMode(mode) {
     state.mode = mode;
     document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.mode === mode));
-    document.querySelectorAll('.mode-here').forEach((el) => { el.hidden = mode !== 'here'; });
-    document.querySelectorAll('.mode-route').forEach((el) => { el.hidden = mode !== 'route'; });
+    for (const m of ['here', 'route', 'beach']) {
+      document.querySelectorAll('.mode-' + m).forEach((el) => { el.hidden = mode !== m; });
+    }
     meMarker.setOpacity(mode === 'here' ? 1 : 0);
-    if (mode === 'here') {
-      map.removeLayer(radiusCircle); radiusCircle.addTo(map);
-      this.layer.clearLayers();
-    } else {
-      map.removeLayer(radiusCircle);
+    map.removeLayer(radiusCircle);
+    if (mode === 'here') radiusCircle.addTo(map);
+    this.layer.clearLayers();
+    if (mode === 'route') {
       if (this.result) this.render(); else this.drawEnds();
     }
+    if (mode === 'beach') beaches.show(); else beaches.hide();
     this.stopPick();
   },
 
