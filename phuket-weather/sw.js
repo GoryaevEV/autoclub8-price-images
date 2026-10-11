@@ -1,5 +1,5 @@
 // Кэшируем только оболочку приложения; погодные данные всегда берём из сети.
-const CACHE = 'phuket-weather-v2';
+const CACHE = 'phuket-weather-v3';
 const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'route.js', 'manifest.webmanifest', 'icon.svg'];
 
 self.addEventListener('install', (e) => {
