@@ -74,6 +74,7 @@ const state = {
   playing: null,
   forecast: null,
   radarNear: null,
+  mode: 'here',
 };
 
 // ---------- Карта ----------
@@ -93,7 +94,9 @@ const radiusCircle = L.circle([state.point.lat, state.point.lon], {
 }).addTo(map);
 
 map.on('click', (e) => {
-  setPoint({ name: 'Точка на карте', lat: +e.latlng.lat.toFixed(4), lon: +e.latlng.lng.toFixed(4) });
+  const p = { name: 'Точка на карте', lat: +e.latlng.lat.toFixed(4), lon: +e.latlng.lng.toFixed(4) };
+  if (state.mode === 'route') route.onMapClick(p);
+  else setPoint(p);
 });
 
 // ---------- Места ----------
@@ -126,7 +129,10 @@ $('locateBtn').onclick = () => {
   navigator.geolocation.getCurrentPosition(
     (pos) => {
       $('locateBtn').disabled = false;
-      setPoint({ name: 'Я здесь', lat: +pos.coords.latitude.toFixed(4), lon: +pos.coords.longitude.toFixed(4) }, true);
+      const me = { name: 'Я здесь', lat: +pos.coords.latitude.toFixed(4), lon: +pos.coords.longitude.toFixed(4) };
+      route.setMe(me);
+      if (state.mode === 'route') route.setEnd('from', me);
+      else setPoint(me, true);
     },
     (err) => {
       $('locateBtn').disabled = false;
@@ -218,41 +224,53 @@ function loadImage(url) {
   });
 }
 
-async function nearestRainKm(frame, lat, lon) {
+// Загружает кусок кадра радара, покрывающий точки (+ запас), и умеет мерить расстояние до дождя.
+async function radarSampler(frame, pts, marginKm) {
   const z = RADAR_ZOOM;
-  const kpp = kmPerPixel(lat, z);
-  const r = Math.ceil(RADAR_RADIUS_KM / kpp);
-  const c = lonLatToPixel(lat, lon, z);
-  const x0 = Math.floor(c.x - r), y0 = Math.floor(c.y - r);
-  const size = 2 * r + 1;
+  const kpp = kmPerPixel(pts[0].lat, z);
+  const m = Math.ceil(marginKm / kpp);
+  const pp = pts.map((p) => lonLatToPixel(p.lat, p.lon, z));
+  const x0 = Math.floor(Math.min(...pp.map((p) => p.x)) - m);
+  const y0 = Math.floor(Math.min(...pp.map((p) => p.y)) - m);
+  const w = Math.ceil(Math.max(...pp.map((p) => p.x)) + m) - x0 + 1;
+  const h = Math.ceil(Math.max(...pp.map((p) => p.y)) + m) - y0 + 1;
 
   const canvas = document.createElement('canvas');
-  canvas.width = size; canvas.height = size;
+  canvas.width = w; canvas.height = h;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
   const tiles = [];
-  for (let tx = Math.floor(x0 / 256); tx <= Math.floor((x0 + size) / 256); tx++) {
-    for (let ty = Math.floor(y0 / 256); ty <= Math.floor((y0 + size) / 256); ty++) {
+  for (let tx = Math.floor(x0 / 256); tx <= Math.floor((x0 + w) / 256); tx++) {
+    for (let ty = Math.floor(y0 / 256); ty <= Math.floor((y0 + h) / 256); ty++) {
       tiles.push(loadImage(tileUrl(frame, z, tx, ty)).then((img) => {
         ctx.drawImage(img, tx * 256 - x0, ty * 256 - y0);
       }));
     }
   }
   await Promise.all(tiles);
+  const px = ctx.getImageData(0, 0, w, h).data; // бросит ошибку при отсутствии CORS
 
-  const px = ctx.getImageData(0, 0, size, size).data; // бросит ошибку при отсутствии CORS
-  const cx = c.x - x0, cy = c.y - y0;
-  let best = Infinity, near5 = 0, total5 = 0;
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const d = Math.hypot(x - cx, y - cy) * kpp;
-      if (d > RADAR_RADIUS_KM) continue;
-      const rain = px[(y * size + x) * 4 + 3] > 40;
-      if (d <= 5) { total5++; if (rain) near5++; }
-      if (rain && d < best) best = d;
+  // расстояние (км) от точки до ближайшего дождя в радиусе maxKm и доля круга 5 км под дождём
+  return function measure(lat, lon, maxKm) {
+    const c = lonLatToPixel(lat, lon, z);
+    const cx = c.x - x0, cy = c.y - y0;
+    const r = Math.ceil(maxKm / kpp);
+    let best = Infinity, near5 = 0, total5 = 0;
+    for (let y = Math.max(0, Math.floor(cy - r)); y <= Math.min(h - 1, Math.ceil(cy + r)); y++) {
+      for (let x = Math.max(0, Math.floor(cx - r)); x <= Math.min(w - 1, Math.ceil(cx + r)); x++) {
+        const d = Math.hypot(x - cx, y - cy) * kpp;
+        if (d > maxKm) continue;
+        const rain = px[(y * w + x) * 4 + 3] > 40;
+        if (d <= 5) { total5++; if (rain) near5++; }
+        if (rain && d < best) best = d;
+      }
     }
-  }
-  return { time: frame.time, km: best, cover5: total5 ? near5 / total5 : 0 };
+    return { km: best, cover5: total5 ? near5 / total5 : 0 };
+  };
+}
+
+async function nearestRainKm(frame, lat, lon) {
+  const measure = await radarSampler(frame, [{ lat, lon }], RADAR_RADIUS_KM);
+  return { time: frame.time, ...measure(lat, lon, RADAR_RADIUS_KM) };
 }
 
 async function analyzeRadarNear() {
@@ -382,7 +400,7 @@ function renderVerdict(minutely, fc, radar) {
     sub = `Вероятность дождя в ближайшие 2 часа ${prob2h}%.` +
       (radar && isFinite(radar.now.km) ? ` Ближайший дождь на радаре в ${Math.round(radar.now.km)} км.` : '');
   }
-  $('verdict').className = 'verdict ' + cls;
+  $('verdict').className = 'verdict mode-here ' + cls;
   $('verdictIcon').textContent = icon;
   $('verdictTitle').textContent = title;
   $('verdictSub').textContent = sub;
@@ -416,7 +434,7 @@ async function refreshPointData() {
     renderVerdict(minutely, fc.value, radarRes);
   } else {
     console.error(fc.reason);
-    $('verdict').className = 'verdict';
+    $('verdict').className = 'verdict mode-here';
     $('verdictIcon').textContent = '⚠️';
     $('verdictTitle').textContent = 'Не удалось загрузить прогноз';
     $('verdictSub').textContent = 'Проверьте интернет и обновите страницу.';
@@ -435,6 +453,7 @@ async function refreshAll() {
 }
 
 renderPlaces();
+route.init();
 map.setView([state.point.lat, state.point.lon], 10);
 refreshAll();
 setInterval(refreshAll, 10 * 60 * 1000);

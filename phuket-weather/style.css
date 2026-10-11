@@ -122,3 +122,36 @@ h2 { font-size: 16px; margin: 0 0 10px; }
   width: 16px; height: 16px; border-radius: 50%;
   background: var(--accent); border: 3px solid #fff; box-shadow: 0 0 0 2px var(--accent);
 }
+
+/* швы между растянутыми тайлами радара */
+.leaflet-tile-container img.leaflet-tile { outline: 1px solid transparent; mix-blend-mode: normal; }
+
+.tabs { display: flex; gap: 6px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 4px; margin-bottom: 10px; }
+.tab { flex: 1; border: 0; background: transparent; color: var(--text); font: inherit; padding: 8px; border-radius: 9px; cursor: pointer; }
+.tab.active { background: var(--accent); color: #fff; }
+[hidden] { display: none !important; }
+
+.route-row { display: grid; grid-template-columns: 64px 1fr auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+.route-row:last-of-type { margin-bottom: 0; }
+.route-row label { color: var(--muted); font-size: 14px; }
+.route-row select {
+  min-width: 0; width: 100%; font: inherit; padding: 8px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--bg); color: var(--text);
+}
+.btn.pick { padding: 8px 10px; }
+.btn.pick.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+#routeBtn { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pick-hint { color: var(--accent); font-size: 14px; margin-top: 8px; }
+
+.trip-big { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.trip-big b { font-size: 34px; }
+.trip-meta { color: var(--muted); font-size: 14px; margin: 4px 0 10px; }
+.deps { display: flex; flex-direction: column; gap: 4px; }
+.dep { display: grid; grid-template-columns: 92px 1fr 44px; gap: 8px; align-items: center; font-size: 14px; border-radius: 8px; padding: 3px 6px; }
+.dep.best { background: rgba(22, 163, 74, .15); }
+.dep.sel { outline: 1px solid var(--accent); }
+.dep .track { height: 10px; background: var(--bar-bg); border-radius: 5px; overflow: hidden; }
+.dep .track i { display: block; height: 100%; border-radius: 5px; }
+.dep .pct { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.legend { display: flex; gap: 12px; color: var(--muted); font-size: 12px; margin-top: 10px; flex-wrap: wrap; }
+.legend i { display: inline-block; width: 18px; height: 4px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
