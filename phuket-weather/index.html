@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Дождь на Пхукете</title>
+  <meta name="description" content="Радар осадков и прогноз дождя для поездок на мотоцикле по Пхукету">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <h1>Дождь на Пхукете</h1>
+    <button id="locateBtn" class="btn" type="button" title="Моё местоположение">📍 Где я</button>
+  </header>
+
+  <nav class="places" id="places" aria-label="Места"></nav>
+
+  <section class="verdict" id="verdict" aria-live="polite">
+    <div class="verdict-icon" id="verdictIcon">⏳</div>
+    <div>
+      <div class="verdict-title" id="verdictTitle">Загружаю данные…</div>
+      <div class="verdict-sub" id="verdictSub"></div>
+    </div>
+  </section>
+
+  <section class="map-wrap">
+    <div id="map"></div>
+    <div class="timeline">
+      <button id="playBtn" class="btn round" type="button" aria-label="Воспроизвести">▶</button>
+      <input id="frameSlider" type="range" min="0" max="0" value="0" aria-label="Кадр радара">
+      <div class="frame-label" id="frameLabel">—</div>
+    </div>
+    <div class="map-note" id="radarNote">Радар: последние 2 часа, обновление каждые 10 минут. Нажмите на карту, чтобы выбрать точку.</div>
+  </section>
+
+  <section class="card">
+    <h2>Сейчас <span class="muted" id="placeName"></span></h2>
+    <div class="now" id="now">—</div>
+    <div class="radar-near" id="radarNear"></div>
+  </section>
+
+  <section class="card">
+    <h2>Ближайшие 4 часа <span class="muted">по 15 минут, мм/ч</span></h2>
+    <div class="bars" id="minutely"></div>
+  </section>
+
+  <section class="card">
+    <h2>24 часа <span class="muted">вероятность дождя и количество</span></h2>
+    <div class="hourly" id="hourly"></div>
+    <p class="hint">Тропические ливни локальные: модель (сетка 9–25 км) даёт вероятность для района, а не для конкретной улицы. На ближайший час надёжнее смотреть радар.</p>
+  </section>
+
+  <footer class="foot">
+    Данные: <a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer</a> (радар),
+    <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (прогноз),
+    © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>.
+    <span id="updated"></span>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
