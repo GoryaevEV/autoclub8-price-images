@@ -72,7 +72,7 @@ const beaches = {
   layer: null,
   cache: {},          // region -> { at, data }
   region: null,
-  timeIdx: 0,
+  when: null,
 
   init() {
     this.layer = L.layerGroup();
@@ -84,27 +84,7 @@ const beaches = {
       reg.appendChild(o);
     }
     reg.onchange = () => { this.region = reg.value; this.load(true); };
-    $('beachTime').onchange = () => { this.timeIdx = +$('beachTime').value; this.render(); };
-  },
-
-  times() {
-    const now = new Date();
-    const at = (dayOff, h) => {
-      const d = new Date(now);
-      d.setDate(d.getDate() + dayOff);
-      d.setHours(h, 0, 0, 0);
-      return d.getTime() / 1000;
-    };
-    const t = Date.now() / 1000;
-    return [
-      { label: 'сейчас', ts: t },
-      { label: 'через 3 часа', ts: t + 3 * 3600 },
-      { label: 'через 6 часов', ts: t + 6 * 3600 },
-      { label: 'завтра 8:00', ts: at(1, 8) },
-      { label: 'завтра 12:00', ts: at(1, 12) },
-      { label: 'завтра 16:00', ts: at(1, 16) },
-      { label: 'послезавтра 10:00', ts: at(2, 10) },
-    ];
+    this.when = whenPicker('beachInput', 'beachNow', () => this.render());
   },
 
   show() {
@@ -112,15 +92,7 @@ const beaches = {
       this.region = BEACHES.some((b) => b.region === state.region) ? state.region : 'Пхукет';
       $('beachRegion').value = this.region;
     }
-    const sel = $('beachTime');
-    sel.innerHTML = '';
-    this.times().forEach((x, i) => {
-      const o = document.createElement('option');
-      o.value = i;
-      o.textContent = x.label;
-      o.selected = i === this.timeIdx;
-      sel.appendChild(o);
-    });
+    this.when.sync();
     this.layer.addTo(map);
     this.load(true);
   },
@@ -145,7 +117,7 @@ const beaches = {
         longitude: pts.map((p) => p.lon.toFixed(4)).join(','),
         hourly: 'wave_height,wave_direction,wave_period,swell_wave_height,swell_wave_direction,swell_wave_period,sea_level_height_msl',
         cell_selection: 'sea',
-        forecast_days: '4',
+        forecast_days: '8',
         timezone: 'auto',
         timeformat: 'unixtime',
       });
@@ -165,7 +137,7 @@ const beaches = {
     const c = this.cache[this.region];
     if (!c) return;
     const list = BEACHES.filter((b) => b.region === this.region);
-    const target = this.times()[this.timeIdx].ts;
+    const target = this.when.get();
 
     const rows = list.map((b, i) => {
       const h = c.data[i].hourly;
@@ -215,7 +187,7 @@ const beaches = {
     if (!lv || lv.every((x) => x == null)) return '';
     const ext = tideExtrema(h.time, lv);
     const next = ext.filter((e) => e.time >= target).slice(0, 2);
-    const fmtE = (e) => `${e.high ? '▲ прилив' : '▼ отлив'} ${fmtTime(e.time)} (${e.h >= 0 ? '+' : ''}${e.h.toFixed(1)} м)`;
+    const fmtE = (e) => `${e.high ? '▲ прилив' : '▼ отлив'} ${fmtWhen(e.time)} (${e.h >= 0 ? '+' : ''}${e.h.toFixed(1)} м)`;
 
     // график уровня моря: от выбранного времени −3 ч до +24 ч
     const t0 = target - 3 * 3600, t1 = target + 24 * 3600;
