@@ -1,15 +1,31 @@
 'use strict';
 
 // ---------- Настройки ----------
+const REGIONS = ['Пхукет', 'Пханг Нга', 'Краби', 'На север до Хуахина'];
 const PLACES = [
-  { name: 'Мост Сарасин', lat: 8.2003, lon: 98.2985 },
-  { name: 'Аэропорт', lat: 8.1132, lon: 98.3169 },
-  { name: 'Патонг', lat: 7.8961, lon: 98.2964 },
-  { name: 'Пхукет‑таун', lat: 7.8804, lon: 98.3923 },
-  { name: 'Чалонг', lat: 7.8467, lon: 98.3376 },
-  { name: 'Ката', lat: 7.8203, lon: 98.2977 },
-  { name: 'Раваи', lat: 7.7796, lon: 98.3253 },
+  { region: 'Пхукет', name: 'Мост Сарасин', lat: 8.2003, lon: 98.2985 },
+  { region: 'Пхукет', name: 'Аэропорт', lat: 8.1132, lon: 98.3169 },
+  { region: 'Пхукет', name: 'Патонг', lat: 7.8961, lon: 98.2964 },
+  { region: 'Пхукет', name: 'Пхукет‑таун', lat: 7.8804, lon: 98.3923 },
+  { region: 'Пхукет', name: 'Чалонг', lat: 7.8467, lon: 98.3376 },
+  { region: 'Пхукет', name: 'Ката', lat: 7.8203, lon: 98.2977 },
+  { region: 'Пхукет', name: 'Раваи', lat: 7.7796, lon: 98.3253 },
+  { region: 'Пханг Нга', name: 'Кхао Лак', lat: 8.6367, lon: 98.2487 },
+  { region: 'Пханг Нга', name: 'Пханг Нга (город)', lat: 8.4509, lon: 98.5256 },
+  { region: 'Пханг Нга', name: 'Самет Нангше', lat: 8.2510, lon: 98.4495 },
+  { region: 'Пханг Нга', name: 'Такуа Па', lat: 8.8656, lon: 98.3459 },
+  { region: 'Пханг Нга', name: 'Кхао Сок', lat: 8.9126, lon: 98.5286 },
+  { region: 'Краби', name: 'Ао Нанг', lat: 8.0322, lon: 98.8226 },
+  { region: 'Краби', name: 'Краби (город)', lat: 8.0863, lon: 98.9063 },
+  { region: 'Краби', name: 'Клонг Муанг', lat: 8.0590, lon: 98.7400 },
+  { region: 'На север до Хуахина', name: 'Ранонг', lat: 9.9658, lon: 98.6348 },
+  { region: 'На север до Хуахина', name: 'Сураттани', lat: 9.1382, lon: 99.3215 },
+  { region: 'На север до Хуахина', name: 'Чумпхон', lat: 10.4930, lon: 99.1800 },
+  { region: 'На север до Хуахина', name: 'Банг Сапхан', lat: 11.2125, lon: 99.5106 },
+  { region: 'На север до Хуахина', name: 'Прачуап Кхири Кхан', lat: 11.8124, lon: 99.7973 },
+  { region: 'На север до Хуахина', name: 'Хуахин', lat: 12.5684, lon: 99.9577 },
 ];
+const placeByName = (name) => PLACES.find((p) => p.name === name);
 const DEFAULT_CENTER = [7.95, 98.34];
 const RADAR_ZOOM = 7;          // бесплатный RainViewer отдаёт тайлы до 7 зума
 const RADAR_COLOR = 2;         // Universal Blue
@@ -75,6 +91,7 @@ const state = {
   forecast: null,
   radarNear: null,
   mode: 'here',
+  region: (storeGet(STORE_KEY) || {}).region || 'Пхукет',
 };
 
 // ---------- Карта ----------
@@ -103,7 +120,21 @@ map.on('click', (e) => {
 function renderPlaces() {
   const box = $('places');
   box.innerHTML = '';
-  for (const p of PLACES) {
+  const regionSel = document.createElement('select');
+  regionSel.className = 'region-sel';
+  regionSel.setAttribute('aria-label', 'Регион');
+  for (const r of REGIONS) {
+    const o = document.createElement('option');
+    o.textContent = r;
+    o.selected = r === state.region;
+    regionSel.appendChild(o);
+  }
+  regionSel.onchange = () => {
+    state.region = regionSel.value;
+    setPoint({ ...PLACES.find((p) => p.region === state.region) }, true);
+  };
+  box.appendChild(regionSel);
+  for (const p of PLACES.filter((q) => q.region === state.region)) {
     const b = document.createElement('button');
     b.type = 'button';
     b.textContent = p.name;
@@ -115,6 +146,7 @@ function renderPlaces() {
 
 function setPoint(p, pan) {
   state.point = p;
+  if (p.region) state.region = p.region;
   storeSet(STORE_KEY, p);
   meMarker.setLatLng([p.lat, p.lon]);
   radiusCircle.setLatLng([p.lat, p.lon]);
@@ -464,3 +496,13 @@ document.addEventListener('visibilitychange', () => {
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
+
+// Официальный радар TMD: у него нет открытого API, поэтому показываем их страницу во фрейме.
+$('tmdShow').onclick = () => {
+  const box = $('tmdFrame');
+  if (!box.hidden) { box.hidden = true; box.innerHTML = ''; $('tmdShow').textContent = 'Показать здесь'; return; }
+  box.hidden = false;
+  box.innerHTML = '<iframe src="https://weather.tmd.go.th/pkt240_HQ_edit2.php" title="Радар TMD Пхукет" loading="lazy" referrerpolicy="no-referrer"></iframe>' +
+    '<p class="hint">Если окно пустое — сайт TMD запрещает встраивание, откройте «Снимок ↗».</p>';
+  $('tmdShow').textContent = 'Скрыть';
+};

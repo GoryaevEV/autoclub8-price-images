@@ -35,8 +35,8 @@ const route = {
 
   init() {
     const saved = storeGet(ROUTE_STORE) || {};
-    this.from = saved.from || { ...PLACES[6] };
-    this.to = saved.to || { ...PLACES[2] };
+    this.from = saved.from || { ...placeByName('Раваи') };
+    this.to = saved.to || { ...placeByName('Самет Нангше') };
     this.layer = L.layerGroup().addTo(map);
 
     document.querySelectorAll('.tab').forEach((t) => {
@@ -92,13 +92,20 @@ const route = {
     for (const [key, id] of [['from', 'fromSel'], ['to', 'toSel']]) {
       const sel = $(id);
       sel.innerHTML = '';
+      const groups = {};
       list.forEach((p, i) => {
         const o = document.createElement('option');
         o.value = i;
         o.textContent = p.name === 'Точка на карте' ? `Точка ${p.lat.toFixed(3)}, ${p.lon.toFixed(3)}` : p.name;
         if (this[key] && p.lat === this[key].lat && p.lon === this[key].lon) o.selected = true;
-        sel.appendChild(o);
+        const g = p.region || 'Мои точки';
+        if (!groups[g]) {
+          groups[g] = document.createElement('optgroup');
+          groups[g].label = g;
+        }
+        groups[g].appendChild(o);
       });
+      for (const g of ['Мои точки', ...REGIONS]) if (groups[g]) sel.appendChild(groups[g]);
     }
   },
 
@@ -236,7 +243,7 @@ const route = {
       longitude: samples.map((s) => s.lon.toFixed(4)).join(','),
       hourly: 'precipitation',
       models: ENSEMBLE_MODELS,
-      forecast_days: '2',
+      forecast_days: '3',
       timezone: 'auto',
       timeformat: 'unixtime',
     });
@@ -294,7 +301,7 @@ const route = {
       latitude: samples.map((s) => s.lat.toFixed(4)).join(','),
       longitude: samples.map((s) => s.lon.toFixed(4)).join(','),
       hourly: 'precipitation_probability',
-      forecast_days: '2',
+      forecast_days: '3',
       timezone: 'auto',
       timeformat: 'unixtime',
     });

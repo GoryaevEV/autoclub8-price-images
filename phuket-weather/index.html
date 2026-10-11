@@ -65,6 +65,18 @@
   <section class="card mode-route" id="routeResult" hidden></section>
 
   <section class="card mode-here">
+    <h2>Радар Метеослужбы Таиланда <span class="muted">TMD, Пхукет, радиус 240 км</span></h2>
+    <p class="hint" style="margin:0 0 10px">Официальный радар в Пхукете — детальнее, чем карта выше. Покрывает Пханг Нгу и Краби.</p>
+    <div class="tmd-btns">
+      <button type="button" class="btn" id="tmdShow">Показать здесь</button>
+      <a class="btn" href="https://weather.tmd.go.th/pkt240_HQ_edit2.php" target="_blank" rel="noopener">Снимок ↗</a>
+      <a class="btn" href="https://weather.tmd.go.th/pkt240HQLoop.php" target="_blank" rel="noopener">Анимация ↗</a>
+      <a class="btn" href="https://weather.tmd.go.th/" target="_blank" rel="noopener">Все радары ↗</a>
+    </div>
+    <div class="tmd-frame" id="tmdFrame" hidden></div>
+  </section>
+
+  <section class="card mode-here">
     <h2>Сейчас <span class="muted" id="placeName"></span></h2>
     <div class="now" id="now">—</div>
     <div class="radar-near" id="radarNear"></div>
