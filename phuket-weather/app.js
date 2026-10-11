@@ -527,9 +527,13 @@ async function refreshAll() {
   await refreshPointData();
 }
 
-renderPlaces();
-route.init();
-beaches.init();
+// Ошибка в одной вкладке не должна ломать радар и прогноз — показываем её баннером и едем дальше.
+for (const [name, fn] of [['места', renderPlaces], ['маршрут', () => route.init()], ['пляжи', () => beaches.init()]]) {
+  try { fn(); } catch (e) {
+    console.error(e);
+    window.dispatchEvent(new ErrorEvent('error', { message: `вкладка «${name}»: ${e.message}` }));
+  }
+}
 
 // Ссылка, присланная через «Поделиться» (Google Карты → Дождь на Пхукете)
 (() => {

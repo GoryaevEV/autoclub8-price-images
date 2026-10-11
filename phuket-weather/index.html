@@ -10,9 +10,30 @@
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
+  <div class="err-banner" id="errBanner" hidden>
+    <div>⚠️ Ошибка в приложении: <span id="errText"></span></div>
+    <button type="button" class="btn" id="errFix">Обновить приложение</button>
+  </div>
+  <script>
+    // Показываем ошибку вместо «вечной загрузки» и даём кнопку полного обновления.
+    window.addEventListener('error', function (e) {
+      var b = document.getElementById('errBanner');
+      if (!b) return;
+      b.hidden = false;
+      document.getElementById('errText').textContent = (e.message || 'неизвестная ошибка') +
+        (e.filename ? ' (' + e.filename.split('/').pop() + ':' + e.lineno + ')' : '');
+    });
+    document.getElementById('errFix').onclick = function () {
+      var done = function () { location.replace(location.pathname + '?r=' + Date.now()); };
+      Promise.all([
+        window.caches ? caches.keys().then(function (k) { return Promise.all(k.map(function (n) { return caches.delete(n); })); }) : 0,
+        navigator.serviceWorker ? navigator.serviceWorker.getRegistrations().then(function (r) { return Promise.all(r.map(function (x) { return x.unregister(); })); }) : 0,
+      ]).then(done, done);
+    };
+  </script>
   <header class="top">
     <h1>Дождь на Пхукете</h1>
     <button id="locateBtn" class="btn" type="button" title="Моё местоположение">📍 Где я</button>
@@ -130,9 +151,9 @@
   </footer>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
-  <script src="route.js"></script>
-  <script src="beaches.js"></script>
-  <script src="import.js"></script>
-  <script src="app.js"></script>
+  <script src="route.js?v=6"></script>
+  <script src="beaches.js?v=6"></script>
+  <script src="import.js?v=6"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>

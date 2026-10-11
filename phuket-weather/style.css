@@ -206,3 +206,9 @@ h2 { font-size: 16px; margin: 0 0 10px; }
 .route-row input[type="datetime-local"] { font-size: 14px; padding: 7px 4px; }
 .route-row .now-btn { padding: 8px 10px; font-size: 14px; }
 .dep { grid-template-columns: 112px 1fr 44px; }
+
+.err-banner {
+  position: sticky; top: 0; z-index: 2000; display: flex; gap: 10px; align-items: center; justify-content: space-between;
+  background: #dc2626; color: #fff; padding: 10px 12px; border-radius: 0 0 12px 12px; font-size: 14px;
+}
+.err-banner .btn { flex: none; }

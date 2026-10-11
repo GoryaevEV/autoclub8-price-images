@@ -1,6 +1,8 @@
 // Кэшируем только оболочку приложения; погодные данные всегда берём из сети.
-const CACHE = 'phuket-weather-v5';
-const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'route.js', 'beaches.js', 'import.js', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png'];
+const CACHE = 'phuket-weather-v6';
+const V = '?v=6';
+const SHELL = ['./', 'index.html', 'style.css' + V, 'app.js' + V, 'route.js' + V, 'beaches.js' + V, 'import.js' + V,
+  'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -19,7 +21,8 @@ self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET' || url.origin !== self.location.origin) return;
   // сеть в приоритете, кэш — если нет интернета
   e.respondWith(
-    fetch(e.request)
+    // no-cache: всегда сверяемся с сервером, чтобы страница и скрипты были одной версии
+    fetch(e.request, { cache: 'no-cache' })
       .then((res) => {
         const copy = res.clone();
         caches.open(CACHE).then((c) => c.put(e.request, copy));
