@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#0f172a">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -38,10 +38,23 @@
       <button type="button" class="btn pick" data-pick="to" title="Выбрать на карте">🗺️</button>
     </div>
     <div class="route-row">
-      <label for="depSel">Выезд</label>
-      <select id="depSel"></select>
-      <button type="button" class="btn" id="routeBtn">Рассчитать</button>
+      <label for="depInput">Выезд</label>
+      <input type="datetime-local" id="depInput">
+      <button type="button" class="btn now-btn active" id="depNow">Сейчас</button>
     </div>
+    <div class="route-actions">
+      <button type="button" class="btn primary" id="routeBtn">Рассчитать</button>
+      <button type="button" class="btn" id="importBtn">📥 Из Google Карт / GPX</button>
+    </div>
+    <div class="import-box" id="importBox" hidden>
+      <textarea id="importText" rows="3" placeholder="Вставьте ссылку на маршрут из Google Карт"></textarea>
+      <div class="route-actions">
+        <button type="button" class="btn primary" id="importGo">Загрузить ссылку</button>
+        <label class="btn file-btn">📄 Файл GPX/KML<input type="file" id="importFile" accept=".gpx,.kml,application/gpx+xml,application/vnd.google-earth.kml+xml" hidden></label>
+      </div>
+      <p class="hint">Google Карты: постройте маршрут на компьютере, скопируйте адрес из строки браузера и вставьте сюда. На телефоне — «Поделиться» → «Дождь на Пхукете» (если приложение установлено) или скопируйте ссылку. Файлы GPX/KML — из Calimoto, Kurviger, RideWithGPS, Google My Maps.</p>
+    </div>
+    <div class="via-info" id="viaInfo" hidden></div>
     <div class="pick-hint" id="pickHint" hidden></div>
   </section>
 
@@ -70,9 +83,10 @@
       <label for="beachRegion">Регион</label>
       <select id="beachRegion"></select>
     </div>
-    <div class="route-row beach-row">
-      <label for="beachTime">Когда</label>
-      <select id="beachTime"></select>
+    <div class="route-row">
+      <label for="beachInput">Когда</label>
+      <input type="datetime-local" id="beachInput">
+      <button type="button" class="btn now-btn active" id="beachNow">Сейчас</button>
     </div>
   </section>
 
@@ -118,6 +132,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
   <script src="route.js"></script>
   <script src="beaches.js"></script>
+  <script src="import.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

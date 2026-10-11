@@ -8,7 +8,9 @@ const ROUTE_STORE = 'phuket-weather:route';
 const WET_MM = 0.3;                 // мм за час: от этого считаем, что «попал под дождь»
 const SAMPLE_KM = 2.5;              // шаг точек вдоль маршрута
 const MAX_SAMPLES = 40;
-const DEPARTURES = [0, 30, 60, 90, 120, 180, 240]; // минуты от «сейчас»
+const DEPARTURES = [0, 30, 60, 90, 120, 180, 240]; // минуты от выбранного времени выезда
+// Сервер, раскрывающий короткие ссылки maps.app.goo.gl (появится вместе с ботом). Пусто — не используется.
+const SHORTLINK_RESOLVER = '';
 const ENSEMBLE_MODELS = 'icon_seamless,gfs_seamless,ecmwf_ifs025';
 
 function haversineKm(a, b) {
@@ -32,11 +34,14 @@ const route = {
   layer: null,
   result: null,
   depIdx: 0,
+  via: [],
+  when: null,
 
   init() {
     const saved = storeGet(ROUTE_STORE) || {};
     this.from = saved.from || { ...placeByName('Раваи') };
     this.to = saved.to || { ...placeByName('Самет Нангше') };
+    this.via = saved.via || [];
     this.layer = L.layerGroup().addTo(map);
 
     document.querySelectorAll('.tab').forEach((t) => {
@@ -47,13 +52,16 @@ const route = {
     });
     $('fromSel').onchange = () => this.onSelect('from');
     $('toSel').onchange = () => this.onSelect('to');
-    $('depSel').onchange = () => {
-      this.depIdx = +$('depSel').value;
-      if (this.result) this.render();
-    };
+    this.when = whenPicker('depInput', 'depNow', () => {
+      this.depIdx = 0;
+      if (this.result) this.calculate();
+    });
     $('routeBtn').onclick = () => this.calculate();
+    $('importBtn').onclick = () => { $('importBox').hidden = !$('importBox').hidden; };
+    $('importGo').onclick = () => this.importText($('importText').value);
+    $('importFile').onchange = (e) => this.importFile(e.target.files[0]);
     this.fillSelects();
-    this.fillDepartures();
+    this.renderVia();
   },
 
   setMode(mode) {
@@ -110,31 +118,70 @@ const route = {
     }
   },
 
-  fillDepartures() {
-    const sel = $('depSel');
-    sel.innerHTML = '';
-    const now = Date.now() / 1000;
-    DEPARTURES.forEach((m, i) => {
-      const o = document.createElement('option');
-      o.value = i;
-      o.textContent = m === 0 ? 'сейчас' : `в ${fmtTime(now + m * 60)} (+${m < 60 ? m + ' мин' : m / 60 + ' ч'})`;
-      if (i === this.depIdx) o.selected = true;
-      sel.appendChild(o);
-    });
-  },
-
   onSelect(key) {
     const list = this.choices();
     this.setEnd(key, list[+$(key === 'from' ? 'fromSel' : 'toSel').value]);
   },
 
-  setEnd(key, p) {
+  setEnd(key, p, keepVia) {
     this[key] = { ...p };
-    storeSet(ROUTE_STORE, { from: this.from, to: this.to });
+    if (!keepVia) this.via = [];
+    this.save();
+    this.renderVia();
     this.result = null;
     $('routeResult').hidden = true;
     this.fillSelects();
     this.drawEnds();
+  },
+
+  save() {
+    storeSet(ROUTE_STORE, { from: this.from, to: this.to, via: this.via });
+  },
+
+  renderVia() {
+    const box = $('viaInfo');
+    if (!this.via.length) { box.hidden = true; return; }
+    box.hidden = false;
+    box.innerHTML = `<span>📍 Маршрут через ${this.via.length} промежуточн${this.via.length === 1 ? 'ую точку' : this.via.length < 5 ? 'ые точки' : 'ых точек'}</span>`;
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn'; b.textContent = 'Убрать';
+    b.onclick = () => { this.via = []; this.save(); this.renderVia(); this.result = null; $('routeResult').hidden = true; this.drawEnds(); };
+    box.appendChild(b);
+  },
+
+  // Загруженный маршрут: старт, финиш и промежуточные точки
+  applyWaypoints(pts, label) {
+    if (pts.length < 2) throw new Error('в маршруте меньше двух точек');
+    const end = pts.length - 1;
+    this.from = { name: pts[0].name || `Старт (${label})`, lat: +pts[0].lat.toFixed(5), lon: +pts[0].lon.toFixed(5) };
+    this.to = { name: pts[end].name || `Финиш (${label})`, lat: +pts[end].lat.toFixed(5), lon: +pts[end].lon.toFixed(5) };
+    this.via = pts.slice(1, end).map((p) => ({ lat: +p.lat.toFixed(5), lon: +p.lon.toFixed(5) }));
+    this.save();
+    this.fillSelects();
+    this.renderVia();
+    $('importBox').hidden = true;
+    this.calculate();
+  },
+
+  async importText(text) {
+    try {
+      const pts = await parseGoogleMapsLink(text, this.me);
+      this.applyWaypoints(pts, 'Google');
+    } catch (e) {
+      alert(e.message);
+    }
+  },
+
+  async importFile(file) {
+    if (!file) return;
+    try {
+      const pts = parseTrackFile(await file.text());
+      this.applyWaypoints(pts, file.name.replace(/\.[^.]+$/, ''));
+    } catch (e) {
+      alert('Не удалось прочитать файл: ' + e.message);
+    } finally {
+      $('importFile').value = '';
+    }
   },
 
   startPick(key) {
@@ -160,6 +207,9 @@ const route = {
 
   drawEnds() {
     this.layer.clearLayers();
+    for (const v of this.via) {
+      L.circleMarker([v.lat, v.lon], { radius: 4, color: '#fff', weight: 2, fillColor: '#64748b', fillOpacity: 1 }).addTo(this.layer);
+    }
     for (const [p, color] of [[this.from, '#2563eb'], [this.to, '#0f172a']]) {
       if (!p) continue;
       L.circleMarker([p.lat, p.lon], { radius: 8, color: '#fff', weight: 3, fillColor: color, fillOpacity: 1 })
@@ -172,7 +222,8 @@ const route = {
   async calculate() {
     if (!this.from || !this.to) return;
     if (haversineKm(this.from, this.to) < 0.3) return alert('Старт и финиш совпадают');
-    this.fillDepartures();
+    this.when.sync();
+    const base = this.when.get();
     const box = $('routeResult');
     box.hidden = false;
     box.innerHTML = '<div class="trip-meta">Строю маршрут и считаю прогноз…</div>';
@@ -180,17 +231,20 @@ const route = {
     try {
       const r = await this.fetchRoute();
       const samples = this.sample(r);
+      // сколько дней прогноза нужно, чтобы покрыть все варианты выезда и всю поездку
+      const days = Math.min(7, Math.max(2, Math.ceil((base - Date.now() / 1000 + r.duration + 5 * 3600) / 86400) + 1));
+      if (base + r.duration > Date.now() / 1000 + 7 * 86400) throw new Error('прогноз есть только на 7 дней вперёд');
       const [ens, radar] = await Promise.allSettled([
-        this.fetchEnsemble(samples),
+        this.fetchEnsemble(samples, days),
         this.radarAlong(samples),
       ]);
       if (radar.status === 'rejected') console.warn('Радар по маршруту:', radar.reason);
       let probs;
       if (ens.status === 'fulfilled') {
-        probs = this.tripProbabilities(samples, ens.value);
+        probs = this.tripProbabilities(samples, ens.value, base);
       } else {
         console.warn('Ансамбль недоступен, считаю по обычному прогнозу:', ens.reason);
-        probs = await this.fallbackProbabilities(samples);
+        probs = await this.fallbackProbabilities(samples, base);
       }
       this.result = { r, samples, probs, radar: radar.status === 'fulfilled' ? radar.value : null };
       this.render();
@@ -203,8 +257,8 @@ const route = {
   },
 
   async fetchRoute() {
-    const { from, to } = this;
-    const url = `https://router.project-osrm.org/route/v1/driving/${from.lon},${from.lat};${to.lon},${to.lat}` +
+    const pts = [this.from, ...this.via, this.to];
+    const url = `https://router.project-osrm.org/route/v1/driving/${pts.map((p) => `${p.lon},${p.lat}`).join(';')}` +
       '?overview=full&geometries=geojson&annotations=duration';
     const res = await fetch(url);
     if (!res.ok) throw new Error('сервис маршрутов ответил ' + res.status);
@@ -238,13 +292,13 @@ const route = {
     return out;
   },
 
-  async fetchEnsemble(samples) {
+  async fetchEnsemble(samples, days) {
     const params = new URLSearchParams({
       latitude: samples.map((s) => s.lat.toFixed(4)).join(','),
       longitude: samples.map((s) => s.lon.toFixed(4)).join(','),
       hourly: 'precipitation',
       models: ENSEMBLE_MODELS,
-      forecast_days: '3',
+      forecast_days: String(days),
       timezone: 'auto',
       timeformat: 'unixtime',
     });
@@ -262,16 +316,15 @@ const route = {
 
   // Вероятность = доля участников ансамбля, в которых хоть в одной точке маршрута
   // в момент проезда выпадает ≥ WET_MM мм/ч.
-  tripProbabilities(samples, ens) {
+  tripProbabilities(samples, ens, base) {
     const { time, series } = ens;
-    const now = Date.now() / 1000;
     const hourIdx = (ts) => {
       // осадки за час, предшествующий time[k]
       for (let k = 0; k < time.length; k++) if (time[k] >= ts) return k;
       return -1;
     };
     return DEPARTURES.map((m) => {
-      const dep = now + m * 60;
+      const dep = base + m * 60;
       const ks = samples.map((s) => hourIdx(dep + s.sec));
       let wet = 0, used = 0;
       const pointWet = new Array(samples.length).fill(0);
@@ -297,12 +350,12 @@ const route = {
   },
 
   // Запасной вариант: обычный прогноз с вероятностью по часам (без ансамбля).
-  async fallbackProbabilities(samples) {
+  async fallbackProbabilities(samples, base) {
     const params = new URLSearchParams({
       latitude: samples.map((s) => s.lat.toFixed(4)).join(','),
       longitude: samples.map((s) => s.lon.toFixed(4)).join(','),
       hourly: 'precipitation_probability',
-      forecast_days: '3',
+      forecast_days: '8',
       timezone: 'auto',
       timeformat: 'unixtime',
     });
@@ -311,9 +364,8 @@ const route = {
     const data = await res.json();
     const locs = Array.isArray(data) ? data : [data];
     const time = locs[0].hourly.time;
-    const now = Date.now() / 1000;
     return DEPARTURES.map((m) => {
-      const dep = now + m * 60;
+      const dep = base + m * 60;
       const points = samples.map((s, i) => {
         const k = time.findIndex((t) => t >= dep + s.sec);
         return k >= 0 ? (locs[i].hourly.precipitation_probability[k] ?? 0) / 100 : 0;
@@ -353,7 +405,7 @@ const route = {
 
     // радар: дождь прямо на маршруте сейчас
     let radarLine = '';
-    if (radar) {
+    if (radar && cur.dep - Date.now() / 1000 < 2 * 3600) {
       const hit = radar.points.map((m, i) => ({ ...m, km: m.km, at: samples[i].km })).filter((m) => m.km < 2);
       const nearest = Math.min(...radar.points.map((m) => m.km));
       if (hit.length) {
@@ -370,7 +422,8 @@ const route = {
     const durMin = Math.round(r.duration / 60);
     const rows = probs.map((x, i) => `
       <div class="dep${x === best ? ' best' : ''}${i === this.depIdx ? ' sel' : ''}" data-i="${i}">
-        <span>${x.minutes === 0 ? 'сейчас' : 'в ' + fmtTime(x.dep)}</span>
+        <span>${x.minutes === 0 && this.when.isNow() ? 'сейчас'
+          : i > 0 && new Date(x.dep * 1000).toDateString() === new Date(probs[0].dep * 1000).toDateString() ? fmtTime(x.dep) : fmtWhen(x.dep)}</span>
         <span class="track"><i style="width:${Math.round((x.p || 0) * 100)}%;background:${probColor(x.p || 0)}"></i></span>
         <span class="pct">${pct(x.p)}</span>
       </div>`).join('');
@@ -378,7 +431,7 @@ const route = {
     $('routeResult').innerHTML = `
       <h2>${this.from.name} → ${this.to.name}</h2>
       <div class="trip-big"><b style="color:${probColor(cur.p || 0)}">${pct(cur.p)}</b>
-        <span>вероятность попасть под дождь при выезде ${cur.minutes === 0 ? 'сейчас' : 'в ' + fmtTime(cur.dep)}</span></div>
+        <span>вероятность попасть под дождь при выезде ${cur.minutes === 0 && this.when.isNow() ? 'сейчас' : 'в ' + fmtWhen(cur.dep)}</span></div>
       <div class="trip-meta">${r.distanceKm.toFixed(1)} км · ~${durMin} мин в пути` +
       (cur.points[wi] > 0.05 ? ` · самый рискованный участок ~${Math.round(samples[wi].km)} км от старта (${pct(cur.points[wi])})` : '') +
       `</div>
@@ -395,7 +448,6 @@ const route = {
     $('routeResult').querySelectorAll('.dep').forEach((el) => {
       el.onclick = () => {
         this.depIdx = +el.dataset.i;
-        $('depSel').value = this.depIdx;
         this.render();
       };
     });

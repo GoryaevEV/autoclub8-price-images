@@ -54,6 +54,49 @@ function fmtHour(unixSec, tz) {
     .format(new Date(unixSec * 1000));
 }
 
+// Время с днём недели, если это не сегодня: «пт 12.10, 10:00».
+function fmtWhen(unixSec) {
+  const d = new Date(unixSec * 1000);
+  const time = fmtTime(unixSec);
+  if (d.toDateString() === new Date().toDateString()) return time;
+  const day = new Intl.DateTimeFormat('ru-RU', { weekday: 'short', day: 'numeric', month: 'numeric' }).format(d);
+  return `${day}, ${time}`;
+}
+
+function toLocalInput(unixSec) {
+  const d = new Date(unixSec * 1000);
+  const z = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`;
+}
+
+// Выбор времени: «Сейчас» или любое время на 7 дней вперёд.
+function whenPicker(inputId, nowBtnId, onChange) {
+  const input = $(inputId), btn = $(nowBtnId);
+  let isNow = true;
+  const sync = () => {
+    const now = Date.now() / 1000;
+    input.min = toLocalInput(now - 3600);
+    input.max = toLocalInput(now + 7 * 86400);
+    if (isNow) input.value = toLocalInput(now);
+    btn.classList.toggle('active', isNow);
+  };
+  btn.onclick = () => { isNow = true; sync(); onChange(); };
+  input.onchange = () => {
+    if (!input.value) { isNow = true; sync(); } else isNow = false;
+    btn.classList.toggle('active', isNow);
+    onChange();
+  };
+  sync();
+  return {
+    get() {
+      if (isNow || !input.value) return Date.now() / 1000;
+      return new Date(input.value).getTime() / 1000;
+    },
+    isNow: () => isNow,
+    sync,
+  };
+}
+
 function intensityLabel(mmh) {
   if (mmh < 0.1) return 'без осадков';
   if (mmh < 2.5) return 'слабый дождь';
@@ -487,6 +530,18 @@ async function refreshAll() {
 renderPlaces();
 route.init();
 beaches.init();
+
+// Ссылка, присланная через «Поделиться» (Google Карты → Дождь на Пхукете)
+(() => {
+  const q = new URLSearchParams(location.search);
+  const shared = [q.get('url'), q.get('text'), q.get('title')].filter(Boolean).join(' ');
+  if (!/https?:\/\//.test(shared)) return;
+  history.replaceState(null, '', location.pathname);
+  route.setMode('route');
+  $('importBox').hidden = false;
+  $('importText').value = shared;
+  route.importText(shared);
+})();
 map.setView([state.point.lat, state.point.lon], 10);
 refreshAll();
 setInterval(refreshAll, 10 * 60 * 1000);

@@ -186,3 +186,23 @@ h2 { font-size: 16px; margin: 0 0 10px; }
 .beach svg .nowline { stroke: var(--bad); stroke-width: 1.5; stroke-dasharray: 3 3; }
 .beach svg text { fill: var(--muted); font-size: 10px; }
 .arrow { display: inline-block; }
+
+.route-row input[type="datetime-local"] {
+  min-width: 0; width: 100%; font: inherit; padding: 7px 8px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--bg); color: var(--text); color-scheme: light dark;
+}
+.btn.now-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.route-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.route-actions .btn { flex: 1; text-align: center; }
+.import-box { margin-top: 10px; }
+.import-box textarea {
+  width: 100%; font: inherit; font-size: 14px; padding: 8px; border-radius: 10px; resize: vertical;
+  border: 1px solid var(--border); background: var(--bg); color: var(--text);
+}
+.file-btn { display: inline-block; cursor: pointer; }
+.via-info { margin-top: 10px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.via-info button { flex: none; }
+.route-row input[type="datetime-local"] { font-size: 14px; padding: 7px 4px; }
+.route-row .now-btn { padding: 8px 10px; font-size: 14px; }
+.dep { grid-template-columns: 112px 1fr 44px; }
